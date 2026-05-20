@@ -32,7 +32,7 @@ spec:
     spec:
       containers:
         - name: minio
-          image: minio/minio:latestnpm run import:dry -- --input product-data/products.uav.json --limit 1
+          image: minio/minio:latest
 
           args:
             - server
