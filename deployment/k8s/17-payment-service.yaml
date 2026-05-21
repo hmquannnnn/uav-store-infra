@@ -79,7 +79,7 @@ spec:
             name: payment-migrations
       containers:
         - name: payment-service
-          image: hmquannnnn/payment-service:latest
+          image: hmquannnnn/payment-service:cf58ff4
           imagePullPolicy: Always
           ports:
             - containerPort: 8086
