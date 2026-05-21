@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: hmquannnnn/uav-store-fe:cf6b0a5
+          image: hmquannnnn/uav-store-fe:a747def
           imagePullPolicy: Always
           ports:
             - name: http
