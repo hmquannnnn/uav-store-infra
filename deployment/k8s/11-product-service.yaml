@@ -79,7 +79,7 @@ spec:
             name: product-migrations
       containers:
         - name: product-service
-          image: hmquannnnn/product-service:ea07f81
+          image: hmquannnnn/product-service:0e5edd6
           imagePullPolicy: Always
           ports:
             - containerPort: 8083
