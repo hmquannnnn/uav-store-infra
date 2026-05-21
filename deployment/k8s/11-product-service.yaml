@@ -6,7 +6,7 @@ metadata:
   labels:
     app: product-service
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: product-service
@@ -112,6 +112,12 @@ spec:
                 configMapKeyRef:
                   name: uav-store-config
                   key: DB_SSL_MODE
+            # Giới hạn connection pool để 5 replica (HPA maxReplicas) × 15 = 75 conn
+            # vẫn ở dưới ngưỡng postgres-product max_connections=100 (mặc định).
+            - name: DB_MAX_CONNS
+              value: "15"
+            - name: DB_MAX_IDLE
+              value: "5"
             - name: MINIO_ENDPOINT
               valueFrom:
                 configMapKeyRef:
