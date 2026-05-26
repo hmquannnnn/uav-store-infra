@@ -82,10 +82,15 @@ spec:
           image: hmquannnnn/order-service:0e5edd6
           imagePullPolicy: Always
           ports:
-            - containerPort: 8085
+            - name: http
+              containerPort: 8085
+            - name: grpc
+              containerPort: 9085
           env:
             - name: APP_PORT
               value: "8085"
+            - name: GRPC_PORT
+              value: "9085"
             - name: APP_ENV
               valueFrom:
                 configMapKeyRef:
@@ -117,6 +122,11 @@ spec:
                 configMapKeyRef:
                   name: uav-store-config
                   key: PRODUCT_SERVICE_URL
+            - name: PRODUCT_SERVICE_GRPC_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: uav-store-config
+                  key: PRODUCT_SERVICE_GRPC_ADDRESS
             - name: USER_SERVICE_URL
               valueFrom:
                 configMapKeyRef:
@@ -154,6 +164,10 @@ spec:
   selector:
     app: order-service
   ports:
-    - port: 8085
-      targetPort: 8085
+    - name: http
+      port: 8085
+      targetPort: http
+    - name: grpc
+      port: 9085
+      targetPort: grpc
   type: ClusterIP

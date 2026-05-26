@@ -20,7 +20,9 @@ data:
   USER_SERVICE_URL: http://user-service.uav-store.svc.cluster.local:8081
   FILE_SERVICE_URL: http://file-service.uav-store.svc.cluster.local:8082
   PRODUCT_SERVICE_URL: http://product-service.uav-store.svc.cluster.local:8083
+  PRODUCT_SERVICE_GRPC_ADDRESS: product-service.uav-store.svc.cluster.local:9083
   ORDER_SERVICE_URL: http://order-service.uav-store.svc.cluster.local:8085
+  ORDER_SERVICE_GRPC_ADDRESS: order-service.uav-store.svc.cluster.local:9085
   PAYMENT_SERVICE_URL: http://payment-service.uav-store.svc.cluster.local:8086
 
   # MinIO (file-service dùng qua pkg/storage/minio NewConfigFromEnv)

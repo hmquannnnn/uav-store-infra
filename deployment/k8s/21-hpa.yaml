@@ -1,16 +1,3 @@
-# HorizontalPodAutoscaler cho 2 service ở rìa hệ thống — api-gateway (entry point)
-# và product-service (read-heavy nhất, được dùng làm target chính cho stress test).
-#
-# Mục tiêu demo "hạ tầng tự động":
-#   - Load balancing: minReplicas: 2 đảm bảo luôn có ≥ 2 pod cho Service ClusterIP
-#     round-robin traffic ngay cả khi không có tải.
-#   - Auto scaling: HPA v2 đọc metrics từ metrics-server, scale theo CPU utilization.
-#
-# Tham số được điều chỉnh cho cluster k3s single-node (EC2 t3.large, 2 vCPU / 8GB):
-#   - maxReplicas thấp (3-5) để không OOM khi mọi service scale cùng lúc.
-#   - scaleUp stabilization ngắn (15s) để dễ chứng minh trong demo 3-phút.
-#   - scaleDown stabilization dài hơn (60s) để pod mới không bị huỷ ngay khi tải giảm tạm thời.
-
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:

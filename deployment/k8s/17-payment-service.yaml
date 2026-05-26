@@ -142,6 +142,11 @@ spec:
                 configMapKeyRef:
                   name: uav-store-config
                   key: ORDER_SERVICE_URL
+            - name: ORDER_SERVICE_GRPC_ADDRESS
+              valueFrom:
+                configMapKeyRef:
+                  name: uav-store-config
+                  key: ORDER_SERVICE_GRPC_ADDRESS
           resources:
             requests:
               memory: "64Mi"

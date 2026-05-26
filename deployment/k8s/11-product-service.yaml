@@ -82,10 +82,15 @@ spec:
           image: hmquannnnn/product-service:0e5edd6
           imagePullPolicy: Always
           ports:
-            - containerPort: 8083
+            - name: http
+              containerPort: 8083
+            - name: grpc
+              containerPort: 9083
           env:
             - name: APP_PORT
               value: "8083"
+            - name: GRPC_PORT
+              value: "9083"
             - name: APP_ENV
               valueFrom:
                 configMapKeyRef:
@@ -175,6 +180,10 @@ spec:
   selector:
     app: product-service
   ports:
-    - port: 8083
-      targetPort: 8083
+    - name: http
+      port: 8083
+      targetPort: http
+    - name: grpc
+      port: 9083
+      targetPort: grpc
   type: ClusterIP
