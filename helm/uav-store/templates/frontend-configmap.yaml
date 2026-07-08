@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: {{ include "uav-store.namespace" . }}
+data:
+  {{- range $key, $val := .Values.frontend.config }}
+  {{ $key }}: {{ $val | quote }}
+  {{- end }}

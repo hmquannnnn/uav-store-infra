@@ -1,0 +1,59 @@
+apiVersion: v2
+name: uav-store
+description: UAV Store — microservices platform for drone e-commerce
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
+
+dependencies:
+  # ── Go services (go-service chart được dùng 6 lần với alias khác nhau) ──────
+  - name: go-service
+    version: "0.1.0"
+    repository: "file://charts/go-service"
+    alias: api-gateway
+
+  - name: go-service
+    version: "0.1.0"
+    repository: "file://charts/go-service"
+    alias: user-service
+
+  - name: go-service
+    version: "0.1.0"
+    repository: "file://charts/go-service"
+    alias: file-service
+
+  - name: go-service
+    version: "0.1.0"
+    repository: "file://charts/go-service"
+    alias: product-service
+
+  - name: go-service
+    version: "0.1.0"
+    repository: "file://charts/go-service"
+    alias: order-service
+
+  - name: go-service
+    version: "0.1.0"
+    repository: "file://charts/go-service"
+    alias: payment-service
+
+  # ── PostgreSQL instances (postgres chart được dùng 4 lần) ───────────────────
+  - name: postgres
+    version: "0.1.0"
+    repository: "file://charts/postgres"
+    alias: postgres-user
+
+  - name: postgres
+    version: "0.1.0"
+    repository: "file://charts/postgres"
+    alias: postgres-product
+
+  - name: postgres
+    version: "0.1.0"
+    repository: "file://charts/postgres"
+    alias: postgres-order
+
+  - name: postgres
+    version: "0.1.0"
+    repository: "file://charts/postgres"
+    alias: postgres-payment
