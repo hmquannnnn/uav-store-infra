@@ -1,0 +1,629 @@
+# ── Config chung → render thành ConfigMap uav-store-config ───────────────────
+config:
+  DB_USER: postgres
+  DB_SSL_MODE: disable
+  APP_ENV: production
+  ENV: local
+
+  USER_SERVICE_URL: http://user-service.uav-store.svc.cluster.local:8081
+  FILE_SERVICE_URL: http://file-service.uav-store.svc.cluster.local:8082
+  PRODUCT_SERVICE_URL: http://product-service.uav-store.svc.cluster.local:8083
+  PRODUCT_SERVICE_GRPC_ADDRESS: product-service.uav-store.svc.cluster.local:9083
+  ORDER_SERVICE_URL: http://order-service.uav-store.svc.cluster.local:8085
+  ORDER_SERVICE_GRPC_ADDRESS: order-service.uav-store.svc.cluster.local:9085
+  PAYMENT_SERVICE_URL: http://payment-service.uav-store.svc.cluster.local:8086
+
+  MINIO_ENDPOINT: minio.uav-store.svc.cluster.local:9000
+  MINIO_PUBLIC_ENDPOINT: storage.uav-store.io.vn
+  MINIO_USE_SSL: "false"
+  MINIO_REGION: us-east-1
+  STORAGE_BUCKET_NAME: uav-store
+
+  API_GATEWAY_EXTERNAL_URL: http://api.uav-store.io.vn
+  CORS_ALLOWED_ORIGINS: "http://uav-store.io.vn,http://www.uav-store.io.vn"
+
+  PAYOS_RETURN_URL: "http://uav-store.io.vn/en/payment/result?state=success"
+  PAYOS_CANCEL_URL: "http://uav-store.io.vn/en/payment/result?state=cancel"
+
+# ── MinIO ─────────────────────────────────────────────────────────────────────
+minio:
+  image: minio/minio:latest
+  storage: 5Gi
+  serverUrl: "http://storage.uav-store.io.vn"
+  consoleBrowserRedirectUrl: "http://minio.uav-store.io.vn"
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+
+# ── Frontend ──────────────────────────────────────────────────────────────────
+frontend:
+  image:
+    repository: hmquannnnn/uav-store-fe
+    tag: "3916901"
+  replicas: 1
+  port: 3000
+  health:
+    path: /en
+    liveness:
+      initialDelaySeconds: 30
+      periodSeconds: 20
+    readiness:
+      initialDelaySeconds: 10
+      periodSeconds: 10
+  resources:
+    requests:
+      memory: "256Mi"
+      cpu: "250m"
+    limits:
+      memory: "768Mi"
+      cpu: "750m"
+  config:
+    PORT: "3000"
+    HOSTNAME: "0.0.0.0"
+    NEXT_PUBLIC_API_ENDPOINT: "http://api.uav-store.io.vn/api"
+    NEXT_PUBLIC_MINIO_PUBLIC_URL: "http://storage.uav-store.io.vn"
+    NEXT_PUBLIC_STORAGE_BASE_URL: "http://storage.uav-store.io.vn"
+
+# ── Ingress ───────────────────────────────────────────────────────────────────
+ingress:
+  className: traefik
+  hosts:
+    frontend:
+      - uav-store.io.vn
+      - www.uav-store.io.vn
+    api: api.uav-store.io.vn
+    storage: storage.uav-store.io.vn
+    minioConsole: minio.uav-store.io.vn
+
+# ══════════════════════════════════════════════════════════════════════════════
+# Go services — key = alias khai báo trong Chart.yaml
+# ══════════════════════════════════════════════════════════════════════════════
+
+api-gateway:
+  name: api-gateway
+  image:
+    repository: hmquannnnn/api-gateway
+    tag: "0e5edd6"
+  port: 8080
+  replicas: 2
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  health:
+    path: /health
+    liveness:
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+  migration:
+    enabled: false
+  grpc:
+    enabled: false
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 3
+    cpuUtilization: 70
+  env:
+    - name: PORT
+      value: "8080"
+    - name: USER_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: USER_SERVICE_URL
+    - name: FILE_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: FILE_SERVICE_URL
+    - name: PRODUCT_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: PRODUCT_SERVICE_URL
+    - name: ORDER_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: ORDER_SERVICE_URL
+    - name: PAYMENT_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: PAYMENT_SERVICE_URL
+    - name: CORS_ALLOWED_ORIGINS
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: CORS_ALLOWED_ORIGINS
+          optional: true
+    - name: JWT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: jwt-secret
+
+# ─────────────────────────────────────────────────────────────────────────────
+user-service:
+  name: user-service
+  image:
+    repository: hmquannnnn/user-service
+    tag: "0e5edd6"
+  port: 8081
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+  health:
+    path: /health
+    liveness:
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+  migration:
+    enabled: true
+    waitForHost: postgres-user.uav-store.svc.cluster.local
+    waitForPort: "5432"
+    waitForName: postgres-user
+    dbHost: postgres-user.uav-store.svc.cluster.local
+    dbPort: "5432"
+    dbName: user_db
+    secretKey: user-db-password
+    configMapName: user-migrations
+  grpc:
+    enabled: false
+  hpa:
+    enabled: false
+  env:
+    - name: APP_PORT
+      value: "8081"
+    - name: APP_ENV
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: APP_ENV
+    - name: DB_HOST
+      value: postgres-user.uav-store.svc.cluster.local
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_USER
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_USER
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: user-db-password
+    - name: DB_NAME
+      value: user_db
+    - name: DB_SSL_MODE
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_SSL_MODE
+    - name: JWT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: jwt-secret
+
+# ─────────────────────────────────────────────────────────────────────────────
+file-service:
+  name: file-service
+  image:
+    repository: hmquannnnn/file-service
+    tag: "0e5edd6"
+  port: 8082
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "500m"
+  health:
+    path: /health
+    liveness:
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+  migration:
+    enabled: false
+    waitForHost: minio.uav-store.svc.cluster.local
+    waitForPort: "9000"
+    waitForName: minio
+  grpc:
+    enabled: false
+  hpa:
+    enabled: false
+  env:
+    - name: APP_PORT
+      value: "8082"
+    - name: APP_ENV
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: APP_ENV
+    - name: STORAGE_BUCKET_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: STORAGE_BUCKET_NAME
+    - name: MINIO_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_ENDPOINT
+    - name: MINIO_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: minio-root-user
+    - name: MINIO_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: minio-root-password
+    - name: MINIO_USE_SSL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_USE_SSL
+    - name: MINIO_REGION
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_REGION
+    - name: MINIO_PUBLIC_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_PUBLIC_ENDPOINT
+    - name: JWT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: jwt-secret
+
+# ─────────────────────────────────────────────────────────────────────────────
+product-service:
+  name: product-service
+  image:
+    repository: hmquannnnn/product-service
+    tag: "0e5edd6"
+  port: 8083
+  replicas: 2
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  health:
+    path: /health
+    liveness:
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+  migration:
+    enabled: true
+    waitForHost: postgres-product.uav-store.svc.cluster.local
+    waitForPort: "5432"
+    waitForName: postgres-product
+    dbHost: postgres-product.uav-store.svc.cluster.local
+    dbPort: "5432"
+    dbName: product_db
+    secretKey: product-db-password
+    configMapName: product-migrations
+  grpc:
+    enabled: true
+    port: 9083
+  hpa:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 5
+    cpuUtilization: 60
+  env:
+    - name: APP_PORT
+      value: "8083"
+    - name: GRPC_PORT
+      value: "9083"
+    - name: APP_ENV
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: APP_ENV
+    - name: DB_HOST
+      value: postgres-product.uav-store.svc.cluster.local
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_USER
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_USER
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: product-db-password
+    - name: DB_NAME
+      value: product_db
+    - name: DB_SSL_MODE
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_SSL_MODE
+    - name: DB_MAX_CONNS
+      value: "15"
+    - name: DB_MAX_IDLE
+      value: "5"
+    - name: MINIO_ENDPOINT
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_ENDPOINT
+    - name: MINIO_ACCESS_KEY
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: minio-root-user
+    - name: MINIO_SECRET_KEY
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: minio-root-password
+    - name: MINIO_USE_SSL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_USE_SSL
+    - name: STORAGE_BUCKET_NAME
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: STORAGE_BUCKET_NAME
+
+# ─────────────────────────────────────────────────────────────────────────────
+order-service:
+  name: order-service
+  image:
+    repository: hmquannnnn/order-service
+    tag: "0e5edd6"
+  port: 8085
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "512Mi"
+      cpu: "500m"
+  health:
+    path: /health
+    liveness:
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+  migration:
+    enabled: true
+    waitForHost: postgres-order.uav-store.svc.cluster.local
+    waitForPort: "5432"
+    waitForName: postgres-order
+    dbHost: postgres-order.uav-store.svc.cluster.local
+    dbPort: "5432"
+    dbName: order_db
+    secretKey: order-db-password
+    configMapName: order-migrations
+  grpc:
+    enabled: true
+    port: 9085
+  hpa:
+    enabled: false
+  env:
+    - name: APP_PORT
+      value: "8085"
+    - name: GRPC_PORT
+      value: "9085"
+    - name: APP_ENV
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: APP_ENV
+    - name: DB_HOST
+      value: postgres-order.uav-store.svc.cluster.local
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_USER
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_USER
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: order-db-password
+    - name: DB_NAME
+      value: order_db
+    - name: DB_SSL_MODE
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_SSL_MODE
+    - name: PRODUCT_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: PRODUCT_SERVICE_URL
+    - name: PRODUCT_SERVICE_GRPC_ADDRESS
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: PRODUCT_SERVICE_GRPC_ADDRESS
+    - name: USER_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: USER_SERVICE_URL
+
+# ─────────────────────────────────────────────────────────────────────────────
+payment-service:
+  name: payment-service
+  image:
+    repository: hmquannnnn/payment-service
+    tag: "0e5edd6"
+  port: 8086
+  replicas: 1
+  resources:
+    requests:
+      memory: "64Mi"
+      cpu: "50m"
+    limits:
+      memory: "256Mi"
+      cpu: "300m"
+  health:
+    path: /health
+    liveness:
+      initialDelaySeconds: 15
+      periodSeconds: 20
+    readiness:
+      initialDelaySeconds: 5
+      periodSeconds: 10
+  migration:
+    enabled: true
+    waitForHost: postgres-payment.uav-store.svc.cluster.local
+    waitForPort: "5432"
+    waitForName: postgres-payment
+    dbHost: postgres-payment.uav-store.svc.cluster.local
+    dbPort: "5432"
+    dbName: payment_db
+    secretKey: payment-db-password
+    configMapName: payment-migrations
+  grpc:
+    enabled: false
+  hpa:
+    enabled: false
+  env:
+    - name: APP_PORT
+      value: "8086"
+    - name: APP_ENV
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: APP_ENV
+    - name: DB_HOST
+      value: postgres-payment.uav-store.svc.cluster.local
+    - name: DB_PORT
+      value: "5432"
+    - name: DB_USER
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_USER
+    - name: DB_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: payment-db-password
+    - name: DB_NAME
+      value: payment_db
+    - name: DB_SSL_MODE
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: DB_SSL_MODE
+    - name: PAYOS_CLIENT_ID
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: payos-client-id
+    - name: PAYOS_API_KEY
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: payos-api-key
+    - name: PAYOS_CHECKSUM_KEY
+      valueFrom:
+        secretKeyRef:
+          name: uav-store-secrets
+          key: payos-checksum-key
+    - name: PAYOS_RETURN_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: PAYOS_RETURN_URL
+    - name: PAYOS_CANCEL_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: PAYOS_CANCEL_URL
+    - name: ORDER_SERVICE_URL
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: ORDER_SERVICE_URL
+    - name: ORDER_SERVICE_GRPC_ADDRESS
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: ORDER_SERVICE_GRPC_ADDRESS
+
+# ══════════════════════════════════════════════════════════════════════════════
+# PostgreSQL instances — key = alias khai báo trong Chart.yaml
+# ══════════════════════════════════════════════════════════════════════════════
+
+postgres-user:
+  name: postgres-user
+  dbName: user_db
+  secretKey: user-db-password
+  storage: 1Gi
+  externalPort: 5433
+
+postgres-product:
+  name: postgres-product
+  dbName: product_db
+  secretKey: product-db-password
+  storage: 1Gi
+  externalPort: 5434
+
+postgres-order:
+  name: postgres-order
+  dbName: order_db
+  secretKey: order-db-password
+  storage: 1Gi
+  externalPort: 5435
+
+postgres-payment:
+  name: postgres-payment
+  dbName: payment_db
+  secretKey: payment-db-password
+  storage: 1Gi
+  externalPort: 5436

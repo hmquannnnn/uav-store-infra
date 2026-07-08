@@ -1,1 +1,2 @@
 deployment/k8s/01-secrets.yaml
+helm/uav-store/values-secrets.yaml

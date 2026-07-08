@@ -1,0 +1,16 @@
+# Override cho production — chỉ chứa các giá trị KHÁC với values.yaml
+
+# Tắt migration qua initContainer (production dùng CI/CD Job riêng)
+config:
+  ENV: production
+
+# Scale up services có traffic cao
+product-service:
+  replicas: 3
+
+# Frontend production dùng HTTPS
+frontend:
+  config:
+    NEXT_PUBLIC_API_ENDPOINT: "https://api.uav-store.io.vn/api"
+    NEXT_PUBLIC_MINIO_PUBLIC_URL: "https://storage.uav-store.io.vn"
+    NEXT_PUBLIC_STORAGE_BASE_URL: "https://storage.uav-store.io.vn"

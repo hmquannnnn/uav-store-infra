@@ -1,0 +1,6 @@
+# Helm sẽ không đóng gói các file/folder này khi chạy helm package
+.git/
+.gitignore
+*.md
+.DS_Store
+charts/*.tgz
