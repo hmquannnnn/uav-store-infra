@@ -28,7 +28,7 @@ spec:
               echo "minio is ready"
       containers:
         - name: file-service
-          image: hmquannnnn/file-service:0e5edd6
+          image: hmquannnnn/file-service:21f64b9
           imagePullPolicy: Always
           ports:
             - containerPort: 8082

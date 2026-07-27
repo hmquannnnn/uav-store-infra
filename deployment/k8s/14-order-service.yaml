@@ -79,7 +79,7 @@ spec:
             name: order-migrations
       containers:
         - name: order-service
-          image: hmquannnnn/order-service:203cd92
+          image: hmquannnnn/order-service:21f64b9
           imagePullPolicy: Always
           ports:
             - name: http
