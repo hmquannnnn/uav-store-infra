@@ -87,7 +87,7 @@ api-gateway:
   name: api-gateway
   image:
     repository: hmquannnnn/api-gateway
-    tag: "0e5edd6"
+    tag: "3afa767"
   port: 8080
   replicas: 2
   resources:
@@ -159,7 +159,7 @@ user-service:
   name: user-service
   image:
     repository: hmquannnnn/user-service
-    tag: "0e5edd6"
+    tag: "3afa767"
   port: 8081
   replicas: 1
   resources:
@@ -231,7 +231,7 @@ file-service:
   name: file-service
   image:
     repository: hmquannnnn/file-service
-    tag: "0e5edd6"
+    tag: "3afa767"
   port: 8082
   replicas: 1
   resources:
@@ -312,7 +312,7 @@ product-service:
   name: product-service
   image:
     repository: hmquannnnn/product-service
-    tag: "0e5edd6"
+    tag: "3afa767"
   port: 8083
   replicas: 2
   resources:
@@ -414,7 +414,7 @@ order-service:
   name: order-service
   image:
     repository: hmquannnnn/order-service
-    tag: "0e5edd6"
+    tag: "3afa767"
   port: 8085
   replicas: 1
   resources:
@@ -499,7 +499,7 @@ payment-service:
   name: payment-service
   image:
     repository: hmquannnnn/payment-service
-    tag: "0e5edd6"
+    tag: "3afa767"
   port: 8086
   replicas: 1
   resources:
