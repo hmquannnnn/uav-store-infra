@@ -1,0 +1,33 @@
+# k6 load test chạy như Job TRONG cluster → gọi Service DNS nội bộ nên có
+# load balancing thật giữa các replica + kích hoạt HPA thật.
+#
+# Trigger bằng scripts/run-loadtest.sh (tạo ConfigMap k6-script từ loadtest.js rồi apply).
+# Job chỉ chạy khi được apply — bạn hoàn toàn chủ động trigger.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: k6-load
+  namespace: uav-store
+spec:
+  backoffLimit: 0          # fail thì không retry (load test, không cần retry)
+  ttlSecondsAfterFinished: 600   # tự dọn Job sau 10 phút
+  template:
+    metadata:
+      labels:
+        job-name: k6-load
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:latest
+          args: ["run", "/scripts/loadtest.js"]
+          env:
+            - name: BASE_URL
+              value: "http://api-gateway.uav-store.svc.cluster.local:8080"
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+      volumes:
+        - name: script
+          configMap:
+            name: k6-script    # tạo bởi run-loadtest.sh từ loadtest.js

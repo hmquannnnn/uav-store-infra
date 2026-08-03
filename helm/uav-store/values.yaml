@@ -70,6 +70,7 @@ frontend:
 
 # ── Ingress ───────────────────────────────────────────────────────────────────
 ingress:
+  enabled: false
   className: traefik
   hosts:
     frontend:

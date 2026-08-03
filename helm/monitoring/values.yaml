@@ -1,0 +1,31 @@
+kube-prometheus-stack:
+
+  grafana:
+    admin:
+      existingSecret: grafana-admin
+      userKey: admin-user
+      passwordKey: admin-password
+    ingress:
+      enabled: false
+    persistence:
+      enabled: true
+      size: 1Gi
+
+  # ── Prometheus ──────────────────────────────────────────────────────────────
+  prometheus:
+    prometheusSpec:
+      serviceMonitorSelectorNilUsesHelmValues: false
+      podMonitorSelectorNilUsesHelmValues: false
+      ruleSelectorNilUsesHelmValues: false
+
+      retention: 3d
+
+      resources:
+        requests:
+          memory: 400Mi
+          cpu: 100m
+        limits:
+          memory: 1Gi
+          cpu: 500m
+  alertmanager:
+    enabled: false

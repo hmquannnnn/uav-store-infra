@@ -31,7 +31,9 @@ export const options = {
   summaryTrendStats: ['avg', 'min', 'med', 'p(90)', 'p(95)', 'p(99)', 'max'],
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://api.uav-store.io.vn';
+// Mặc định trỏ Service DNS nội bộ (chạy k6 như Job trong cluster → có load balancing
+// thật giữa các replica). Override qua env BASE_URL nếu cần test endpoint khác.
+const BASE_URL = __ENV.BASE_URL || 'http://api-gateway.uav-store.svc.cluster.local:8080';
 
 export default function () {
   const res = http.get(`${BASE_URL}/api/products?page=1&limit=20`);
