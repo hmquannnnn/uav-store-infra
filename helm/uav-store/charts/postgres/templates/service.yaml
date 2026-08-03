@@ -11,18 +11,18 @@ spec:
       targetPort: 5432
   type: ClusterIP
 
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: {{ .Values.name }}-external
-  namespace: {{ .Release.Namespace }}
-spec:
-  selector:
-    app: {{ .Values.name }}
-  ports:
-    - name: postgres
-      protocol: TCP
-      port: {{ .Values.externalPort }}
-      targetPort: 5432
-  type: LoadBalancer
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: {{ .Values.name }}-external
+#   namespace: {{ .Release.Namespace }}
+# spec:
+#   selector:
+#     app: {{ .Values.name }}
+#   ports:
+#     - name: postgres
+#       protocol: TCP
+#       port: {{ .Values.externalPort }}
+#       targetPort: 5432
+#   type: LoadBalancer
