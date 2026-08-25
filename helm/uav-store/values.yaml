@@ -64,9 +64,10 @@ frontend:
   config:
     PORT: "3000"
     HOSTNAME: "0.0.0.0"
-    NEXT_PUBLIC_API_ENDPOINT: "http://api.uav-store.io.vn/api"
-    NEXT_PUBLIC_MINIO_PUBLIC_URL: "http://storage.uav-store.io.vn"
-    NEXT_PUBLIC_STORAGE_BASE_URL: "http://storage.uav-store.io.vn"
+    NEXT_PUBLIC_API_ENDPOINT: "https://api.uav-store.io.vn/api"
+    # S3 endpoint gốc (path-style) — file_path BE trả về đã chứa bucket, KHÔNG kèm bucket vào đây
+    NEXT_PUBLIC_MINIO_PUBLIC_URL: "https://s3.ap-southeast-1.amazonaws.com"
+    NEXT_PUBLIC_STORAGE_BASE_URL: "https://s3.ap-southeast-1.amazonaws.com"
 
 # ── Ingress ───────────────────────────────────────────────────────────────────
 ingress:
