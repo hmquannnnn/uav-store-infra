@@ -7,7 +7,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/hmquannnnn/uav-store-infra.git
-    targetRevision: dev
+    targetRevision: aws-deploy
     path: helm/uav-store
     helm:
       valueFiles:

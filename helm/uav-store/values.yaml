@@ -1,9 +1,9 @@
 # ── Config chung → render thành ConfigMap uav-store-config ───────────────────
 config:
   DB_USER: postgres
-  DB_SSL_MODE: disable
+  DB_SSL_MODE: require # RDS PostgreSQL 15+ force SSL
   APP_ENV: production
-  ENV: local
+  ENV: local # giữ "local" để initContainer chạy migration (không có CI/CD migration riêng)
 
   USER_SERVICE_URL: http://user-service.uav-store.svc.cluster.local:8081
   FILE_SERVICE_URL: http://file-service.uav-store.svc.cluster.local:8082
@@ -13,37 +13,25 @@ config:
   ORDER_SERVICE_GRPC_ADDRESS: order-service.uav-store.svc.cluster.local:9085
   PAYMENT_SERVICE_URL: http://payment-service.uav-store.svc.cluster.local:8086
 
-  MINIO_ENDPOINT: minio.uav-store.svc.cluster.local:9000
-  MINIO_PUBLIC_ENDPOINT: storage.uav-store.io.vn
-  MINIO_USE_SSL: "false"
-  MINIO_REGION: us-east-1
-  STORAGE_BUCKET_NAME: uav-store
+  # S3 thật (thay MinIO). minio-go nói chuyện thẳng S3; auth bằng IAM role của node.
+  MINIO_ENDPOINT: s3.ap-southeast-1.amazonaws.com
+  MINIO_PUBLIC_ENDPOINT: s3.ap-southeast-1.amazonaws.com
+  MINIO_USE_SSL: "true"
+  MINIO_REGION: ap-southeast-1
+  MINIO_AUTH_TYPE: iam
+  STORAGE_BUCKET_NAME: uav-store-data-537588573117
 
-  API_GATEWAY_EXTERNAL_URL: http://api.uav-store.io.vn
-  CORS_ALLOWED_ORIGINS: "http://uav-store.io.vn,http://www.uav-store.io.vn"
+  API_GATEWAY_EXTERNAL_URL: https://api.uav-store.io.vn
+  CORS_ALLOWED_ORIGINS: "https://uav-store.io.vn,https://www.uav-store.io.vn"
 
-  PAYOS_RETURN_URL: "http://uav-store.io.vn/en/payment/result?state=success"
-  PAYOS_CANCEL_URL: "http://uav-store.io.vn/en/payment/result?state=cancel"
-
-# ── MinIO ─────────────────────────────────────────────────────────────────────
-minio:
-  image: minio/minio:latest
-  storage: 5Gi
-  serverUrl: "http://storage.uav-store.io.vn"
-  consoleBrowserRedirectUrl: "http://minio.uav-store.io.vn"
-  resources:
-    requests:
-      memory: "256Mi"
-      cpu: "250m"
-    limits:
-      memory: "512Mi"
-      cpu: "500m"
+  PAYOS_RETURN_URL: "https://uav-store.io.vn/en/payment/result?state=success"
+  PAYOS_CANCEL_URL: "https://uav-store.io.vn/en/payment/result?state=cancel"
 
 # ── Frontend ──────────────────────────────────────────────────────────────────
 frontend:
   image:
     repository: hmquannnnn/uav-store-fe
-    tag: "3916901"
+    tag: "d7e3a9d" # FE build với NEXT_PUBLIC_* trỏ S3/https
   replicas: 1
   port: 3000
   health:
@@ -71,15 +59,17 @@ frontend:
 
 # ── Ingress ───────────────────────────────────────────────────────────────────
 ingress:
-  enabled: false
+  enabled: true
   className: traefik
+  tls:
+    enabled: true
+    issuer: letsencrypt-prod # ClusterIssuer (templates/clusterissuer.yaml)
   hosts:
     frontend:
       - uav-store.io.vn
       - www.uav-store.io.vn
     api: api.uav-store.io.vn
-    storage: storage.uav-store.io.vn
-    minioConsole: minio.uav-store.io.vn
+    # storage/minioConsole đã bỏ — file đi thẳng S3 qua presigned URL
 
 # ══════════════════════════════════════════════════════════════════════════════
 # Go services — key = alias khai báo trong Chart.yaml
@@ -181,10 +171,10 @@ user-service:
       periodSeconds: 10
   migration:
     enabled: true
-    waitForHost: postgres-user.uav-store.svc.cluster.local
+    waitForHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     waitForPort: "5432"
-    waitForName: postgres-user
-    dbHost: postgres-user.uav-store.svc.cluster.local
+    waitForName: rds
+    dbHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     dbPort: "5432"
     dbName: user_db
     secretKey: user-db-password
@@ -202,7 +192,7 @@ user-service:
           name: uav-store-config
           key: APP_ENV
     - name: DB_HOST
-      value: postgres-user.uav-store.svc.cluster.local
+      value: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     - name: DB_PORT
       value: "5432"
     - name: DB_USER
@@ -233,7 +223,7 @@ file-service:
   name: file-service
   image:
     repository: hmquannnnn/file-service
-    tag: "3afa767"
+    tag: "d5eef19" # build có MINIO_AUTH_TYPE=iam
   port: 8082
   replicas: 1
   resources:
@@ -252,10 +242,7 @@ file-service:
       initialDelaySeconds: 5
       periodSeconds: 10
   migration:
-    enabled: false
-    waitForHost: minio.uav-store.svc.cluster.local
-    waitForPort: "9000"
-    waitForName: minio
+    enabled: false # S3 là dịch vụ managed — không cần wait, không migration
   grpc:
     enabled: false
   hpa:
@@ -278,16 +265,12 @@ file-service:
         configMapKeyRef:
           name: uav-store-config
           key: MINIO_ENDPOINT
-    - name: MINIO_ACCESS_KEY
+    # Không còn access key — SDK dùng IAM role của node qua IMDS (MINIO_AUTH_TYPE=iam)
+    - name: MINIO_AUTH_TYPE
       valueFrom:
-        secretKeyRef:
-          name: uav-store-secrets
-          key: minio-root-user
-    - name: MINIO_SECRET_KEY
-      valueFrom:
-        secretKeyRef:
-          name: uav-store-secrets
-          key: minio-root-password
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_AUTH_TYPE
     - name: MINIO_USE_SSL
       valueFrom:
         configMapKeyRef:
@@ -314,7 +297,7 @@ product-service:
   name: product-service
   image:
     repository: hmquannnnn/product-service
-    tag: "3afa767"
+    tag: "d5eef19" # build có MINIO_AUTH_TYPE=iam + MINIO_REGION
   port: 8083
   replicas: 2
   resources:
@@ -334,10 +317,10 @@ product-service:
       periodSeconds: 10
   migration:
     enabled: true
-    waitForHost: postgres-product.uav-store.svc.cluster.local
+    waitForHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     waitForPort: "5432"
-    waitForName: postgres-product
-    dbHost: postgres-product.uav-store.svc.cluster.local
+    waitForName: rds
+    dbHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     dbPort: "5432"
     dbName: product_db
     secretKey: product-db-password
@@ -361,7 +344,7 @@ product-service:
           name: uav-store-config
           key: APP_ENV
     - name: DB_HOST
-      value: postgres-product.uav-store.svc.cluster.local
+      value: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     - name: DB_PORT
       value: "5432"
     - name: DB_USER
@@ -390,21 +373,22 @@ product-service:
         configMapKeyRef:
           name: uav-store-config
           key: MINIO_ENDPOINT
-    - name: MINIO_ACCESS_KEY
+    # Không còn access key — SDK dùng IAM role của node qua IMDS (MINIO_AUTH_TYPE=iam)
+    - name: MINIO_AUTH_TYPE
       valueFrom:
-        secretKeyRef:
-          name: uav-store-secrets
-          key: minio-root-user
-    - name: MINIO_SECRET_KEY
-      valueFrom:
-        secretKeyRef:
-          name: uav-store-secrets
-          key: minio-root-password
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_AUTH_TYPE
     - name: MINIO_USE_SSL
       valueFrom:
         configMapKeyRef:
           name: uav-store-config
           key: MINIO_USE_SSL
+    - name: MINIO_REGION
+      valueFrom:
+        configMapKeyRef:
+          name: uav-store-config
+          key: MINIO_REGION
     - name: STORAGE_BUCKET_NAME
       valueFrom:
         configMapKeyRef:
@@ -436,10 +420,10 @@ order-service:
       periodSeconds: 10
   migration:
     enabled: true
-    waitForHost: postgres-order.uav-store.svc.cluster.local
+    waitForHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     waitForPort: "5432"
-    waitForName: postgres-order
-    dbHost: postgres-order.uav-store.svc.cluster.local
+    waitForName: rds
+    dbHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     dbPort: "5432"
     dbName: order_db
     secretKey: order-db-password
@@ -460,7 +444,7 @@ order-service:
           name: uav-store-config
           key: APP_ENV
     - name: DB_HOST
-      value: postgres-order.uav-store.svc.cluster.local
+      value: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     - name: DB_PORT
       value: "5432"
     - name: DB_USER
@@ -521,10 +505,10 @@ payment-service:
       periodSeconds: 10
   migration:
     enabled: true
-    waitForHost: postgres-payment.uav-store.svc.cluster.local
+    waitForHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     waitForPort: "5432"
-    waitForName: postgres-payment
-    dbHost: postgres-payment.uav-store.svc.cluster.local
+    waitForName: rds
+    dbHost: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     dbPort: "5432"
     dbName: payment_db
     secretKey: payment-db-password
@@ -542,7 +526,7 @@ payment-service:
           name: uav-store-config
           key: APP_ENV
     - name: DB_HOST
-      value: postgres-payment.uav-store.svc.cluster.local
+      value: uav-store-db.c3uu8i8ugp98.ap-southeast-1.rds.amazonaws.com
     - name: DB_PORT
       value: "5432"
     - name: DB_USER
@@ -599,33 +583,6 @@ payment-service:
           key: ORDER_SERVICE_GRPC_ADDRESS
 
 # ══════════════════════════════════════════════════════════════════════════════
-# PostgreSQL instances — key = alias khai báo trong Chart.yaml
+# PostgreSQL: dùng RDS (uav-store-infra/terraform) — không self-host trong cluster.
+# 1 instance chứa user_db/product_db/order_db/payment_db (Ansible dbinit tạo).
 # ══════════════════════════════════════════════════════════════════════════════
-
-postgres-user:
-  name: postgres-user
-  dbName: user_db
-  secretKey: user-db-password
-  storage: 1Gi
-  externalPort: 5433
-
-postgres-product:
-  name: postgres-product
-  dbName: product_db
-  secretKey: product-db-password
-  storage: 1Gi
-  externalPort: 5434
-
-postgres-order:
-  name: postgres-order
-  dbName: order_db
-  secretKey: order-db-password
-  storage: 1Gi
-  externalPort: 5435
-
-postgres-payment:
-  name: postgres-payment
-  dbName: payment_db
-  secretKey: payment-db-password
-  storage: 1Gi
-  externalPort: 5436

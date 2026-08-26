@@ -37,23 +37,5 @@ dependencies:
     repository: "file://charts/go-service"
     alias: payment-service
 
-  # ── PostgreSQL instances (postgres chart được dùng 4 lần) ───────────────────
-  - name: postgres
-    version: "0.1.0"
-    repository: "file://charts/postgres"
-    alias: postgres-user
-
-  - name: postgres
-    version: "0.1.0"
-    repository: "file://charts/postgres"
-    alias: postgres-product
-
-  - name: postgres
-    version: "0.1.0"
-    repository: "file://charts/postgres"
-    alias: postgres-order
-
-  - name: postgres
-    version: "0.1.0"
-    repository: "file://charts/postgres"
-    alias: postgres-payment
+  # ── PostgreSQL: KHÔNG self-host nữa — dùng RDS (uav-store-infra/terraform) ──
+  # (subchart postgres giữ trong charts/ cho nhánh local, không khai báo dep ở đây)

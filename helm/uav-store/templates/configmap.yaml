@@ -21,6 +21,7 @@ data:
   MINIO_PUBLIC_ENDPOINT: {{ .Values.config.MINIO_PUBLIC_ENDPOINT | quote }}
   MINIO_USE_SSL: {{ .Values.config.MINIO_USE_SSL | quote }}
   MINIO_REGION: {{ .Values.config.MINIO_REGION | quote }}
+  MINIO_AUTH_TYPE: {{ .Values.config.MINIO_AUTH_TYPE | default "static" | quote }}
   STORAGE_BUCKET_NAME: {{ .Values.config.STORAGE_BUCKET_NAME | quote }}
 
   API_GATEWAY_EXTERNAL_URL: {{ .Values.config.API_GATEWAY_EXTERNAL_URL | quote }}

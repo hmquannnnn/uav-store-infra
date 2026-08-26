@@ -5,9 +5,23 @@ metadata:
   name: uav-store-ingress
   namespace: {{ include "uav-store.namespace" . }}
   annotations:
+    {{- if .Values.ingress.tls.enabled }}
+    traefik.ingress.kubernetes.io/router.entrypoints: web,websecure
+    cert-manager.io/cluster-issuer: {{ .Values.ingress.tls.issuer }}
+    {{- else }}
     traefik.ingress.kubernetes.io/router.entrypoints: web
+    {{- end }}
 spec:
   ingressClassName: {{ .Values.ingress.className }}
+  {{- if .Values.ingress.tls.enabled }}
+  tls:
+    - hosts:
+        {{- range .Values.ingress.hosts.frontend }}
+        - {{ . }}
+        {{- end }}
+        - {{ .Values.ingress.hosts.api }}
+      secretName: uav-store-tls
+  {{- end }}
   rules:
     {{- range .Values.ingress.hosts.frontend }}
     - host: {{ . }}
@@ -31,24 +45,4 @@ spec:
                 name: api-gateway
                 port:
                   number: 8080
-    - host: {{ .Values.ingress.hosts.storage }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: minio
-                port:
-                  number: 9000
-    - host: {{ .Values.ingress.hosts.minioConsole }}
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: minio
-                port:
-                  number: 9001
 {{- end }}
